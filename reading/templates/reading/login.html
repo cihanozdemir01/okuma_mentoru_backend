@@ -1,0 +1,10 @@
+<!-- reading/templates/reading/login.html -->
+{% extends "reading/form_template.html" %}
+
+{% block title %}Giriş Yap{% endblock %}
+
+{% block content %}
+    {% with title="Giriş Yap" button_text="Giriş Yap" alternate_url=request.build_absolute_uri|slice:":-6"|add:"register/" alternate_text="Hesabın yok mu? Kayıt Ol" %}
+        {{ block.super }}
+    {% endwith %}
+{% endblock %}

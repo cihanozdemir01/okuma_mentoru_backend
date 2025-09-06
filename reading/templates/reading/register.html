@@ -1,0 +1,10 @@
+<!-- reading/templates/reading/register.html -->
+{% extends "reading/form_template.html" %}
+
+{% block title %}Kayıt Ol{% endblock %}
+
+{% block content %}
+    {% with title="Kayıt Ol" button_text="Kayıt Ol" alternate_url=request.scheme|add:"://"|add:request.get_host|add:"/login/" alternate_text="Zaten bir hesabın var mı? Giriş Yap" %}
+        {{ block.super }}
+    {% endwith %}
+{% endblock %}

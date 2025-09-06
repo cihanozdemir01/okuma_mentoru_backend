@@ -1,0 +1,25 @@
+<!-- reading/templates/reading/delete_book_confirm.html -->
+{% extends "reading/base.html" %}
+
+{% block title %}Silmeyi Onayla{% endblock %}
+
+{% block content %}
+    <div class="bg-white p-8 rounded-lg shadow-md w-full text-center">
+        <h1 class="text-2xl font-bold text-slate-700 mb-4">Emin misin?</h1>
+        <p class="text-slate-600 mb-6">
+            "<strong>{{ book.title }}</strong>" (Yazar: {{ book.author|default:"Belirtilmemiş" }}) adlı kitabı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex justify-center space-x-4">
+                <a href="{% url 'reading:book_detail' pk=book.pk %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                    İptal
+                </a>
+                <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                    Evet, Sil
+                </button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

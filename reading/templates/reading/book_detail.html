@@ -1,0 +1,156 @@
+<!-- reading/templates/reading/book_detail.html -->
+{% extends "reading/base.html" %}
+
+{% load reading_tags %} 
+
+{% block title %}{{ book.title }} - Detaylar{% endblock %}
+
+{% block content %}
+
+    <!-- YENİ BÖLÜM: AI GERİ BİLDİRİM MESAJI -->
+    {% if feedback_message %}
+    <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6" role="alert">
+        <p class="font-bold">Momentum Koçu diyor ki:</p>
+        <p>{{ feedback_message }}</p>
+    </div>
+    {% endif %}
+    
+    <div class="bg-white p-8 rounded-lg shadow-md w-full">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-700">{{ book.title }}</h1>
+                <p class="text-xs text-slate-400 mb-1">Yazar: {{ book.author|default:"Belirtilmemiş" }}</p>
+                <p class="text-sm text-slate-500 mb-4">Hedef Bitiş: {{ book.target_date|date:"d F Y" }}</p>
+            </div>
+            <a href="{% url 'reading:dashboard' %}" class="text-sm text-blue-500 hover:text-blue-700">&larr; Panele Dön</a>
+        </div>
+
+        {% if book.ai_plan %}
+        <div class="bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 mb-6 rounded-r-lg" role="alert">
+            <p class="font-bold">Mentor'un Başlangıç Planı:</p>
+            <p>{{ book.ai_plan|linebreaks }}</p>
+        </div>
+        {% endif %}
+
+        <!-- İlerleme Çubuğu -->
+        <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
+            {% with progress=book.current_page|mul:100|div:book.total_pages %}
+            <div class="bg-green-500 h-4 rounded-full" style="width: {{ progress }}%"></div>
+            {% endwith %}
+        </div>
+        <p class="text-center text-slate-600 mb-6">{{ book.current_page }} / {{ book.total_pages }} sayfa tamamlandı.</p>
+
+        <!-- İlerleme Ekleme Formu -->
+        <div class="border-t pt-6">
+            <h2 class="text-xl font-semibold mb-4">Bugünkü Hedefin</h2>
+        
+            <!-- Dinamik Hedef Gösterimi -->
+            {% if book.is_completed %}
+                <p class="text-center text-lg text-green-600 font-semibold mb-4">Bu kitabı tamamladın, tebrikler! 🎉</p>
+            {% elif daily_goal > 0 %}
+                <p class="text-center text-5xl font-bold text-blue-600 mb-2">{{ daily_goal }}</p>
+                <p class="text-center text-slate-500 mb-4">sayfa okuman gerekiyor.</p>
+                <p class="text-center text-sm text-gray-500 italic mb-4">{{ goal_status_message }}</p>
+            {% else %}
+                <p class="text-center text-slate-500 mb-4">Bu kitap için bir hedef tarihi belirlemedin veya hedefin tamamlandı.</p>
+            {% endif %}
+            <!-- Gösterim Sonu -->
+        
+            <!-- Kitap tamamlanmadıysa formu göster -->
+            {% if not book.is_completed %}
+            <form action="{% url 'reading:update_progress' pk=book.pk %}" method="post" class="flex items-center space-x-4 mt-4">
+                {% csrf_token %}
+                <input type="number" name="pages_read" placeholder="Bugün kaç sayfa okudun?" class="shadow appearance-none border rounded w-full py-2 px-3 text-slate-700 leading-tight focus:outline-none focus:shadow-outline">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Ekle
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- NOTLAR BÖLÜMÜ (YENİ TASARIM) -->
+    <div class="mt-8 border-t pt-6">
+        <h2 class="text-2xl font-semibold mb-4">Notlarım ve Alıntılarım</h2>
+        
+        <!-- Yeni Not Ekleme Formu -->
+        <form method="post" class="mb-8 bg-slate-50 p-4 rounded-lg">
+            {% csrf_token %}
+            
+            <!-- Django'nun {{ form.as_p }} yerine manuel alan oluşturma -->
+            <div class="mb-2">
+                <!-- 'text' alanı için etiket (forms.py'da boş bırakmıştık, bu yüzden görünmez) -->
+                <label for="{{ note_form.text.id_for_label }}" class="sr-only">{{ note_form.text.label }}</label>
+                
+                <!-- 'text' alanının kendisi (textarea) -->
+                <textarea name="{{ note_form.text.name }}" id="{{ note_form.text.id_for_label }}" rows="3"
+                        class="shadow-sm block w-full sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Kitapla ilgili düşüncelerinizi veya sevdiğiniz bir alıntıyı buraya yazın..."></textarea>
+            </div>
+            
+            <div class="flex justify-end">
+                <button type="submit" name="note_submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">
+                    Notu Kaydet
+                </button>
+            </div>
+        </form>
+
+        <!-- Mevcut Notlar Başlığı -->
+        <h3 class="text-xl font-semibold mb-4 border-b pb-2">Kaydedilen Notlar</h3>
+
+        <!-- Mevcut Notlar Listesi -->
+        <div class="space-y-4">
+            {% for note in notes %}
+                <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 shadow-sm">
+                    <p class="text-gray-800">{{ note.text|linebreaks }}</p>
+                    <p class="text-xs text-gray-400 mt-2 text-right">{{ note.created_at|date:"d F Y, H:i" }}</p>
+                </div>
+            {% empty %}
+                <div class="bg-white text-center p-6 rounded-lg border border-dashed">
+                    <p class="text-slate-500">Bu kitap için henüz hiç not almadın.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+<!-- NOTLAR BÖLÜMÜ SONU -->
+    <!-- YENİ BÖLÜM -->
+    <div class="mt-6 flex justify-end space-x-3">
+        <a href="{% url 'reading:edit_book' pk=book.pk %}" class="text-sm bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded">
+            Düzenle
+        </a>
+        <a href="{% url 'reading:delete_book' pk=book.pk %}" class="text-sm bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+            Sil
+        </a>
+    </div>
+    {% if show_confetti %}
+<script>
+    // Sayfa yüklendiğinde bu script çalışacak
+    document.addEventListener('DOMContentLoaded', (event) => {
+        // Gerçekçi bir efekt için birkaç kez patlatalım
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+
+        // Kısa bir süre sonra farklı yerlerden tekrar patlatalım
+        setTimeout(() => {
+            confetti({
+                particleCount: 120,
+                spread: 100,
+                origin: { x: 0.2, y: 0.7 }
+            });
+        }, 300);
+
+        setTimeout(() => {
+            confetti({
+                particleCount: 120,
+                spread: 100,
+                origin: { x: 0.8, y: 0.7 }
+            });
+        }, 600);
+    });
+</script>
+{% endif %}
+
+{% endblock %}

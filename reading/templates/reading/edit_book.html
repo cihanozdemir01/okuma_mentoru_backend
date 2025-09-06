@@ -1,0 +1,10 @@
+<!-- reading/templates/reading/edit_book.html -->
+{% extends "reading/form_template.html" %}
+
+{% block title %}Kitabı Düzenle{% endblock %}
+
+{% block content %}
+    {% with title="Kitabı Düzenle: "|add:book.title button_text="Değişiklikleri Kaydet" alternate_url=request.build_absolute_uri|slice:":-5"|add:"" alternate_text="İptal Et" %}
+        {{ block.super }}
+    {% endwith %}
+{% endblock %}

@@ -1,0 +1,10 @@
+<!-- reading/templates/reading/add_book.html -->
+{% extends "reading/form_template.html" %}
+
+{% block title %}Yeni Kitap Ekle{% endblock %}
+
+{% block content %}
+    {% with title="Yeni Kitap Ekle" button_text="Kitabı Ekle" alternate_url=request.scheme|add:"://"|add:request.get_host|add:"/" alternate_text="Panele Geri Dön" %}
+        {{ block.super }}
+    {% endwith %}
+{% endblock %}

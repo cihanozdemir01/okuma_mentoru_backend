@@ -1,0 +1,21 @@
+<!-- reading/templates/reading/base.html -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Tailwind CSS CDN Linki -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <title>{% block title %}Okuma Mentoru{% endblock %}</title>
+</head>
+<body class="bg-slate-100 text-slate-800">
+    <div class="container mx-auto mt-8 max-w-2xl px-4">
+        <!-- Bu blok, diğer şablonların kendi içeriklerini
+             yerleştireceği yerdir -->
+        {% block content %}
+        {% endblock %}
+    </div>
+</body>
+</html>

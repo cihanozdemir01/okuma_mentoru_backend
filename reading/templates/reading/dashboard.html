@@ -1,0 +1,116 @@
+<!-- reading/templates/reading/dashboard.html -->
+{% extends "reading/base.html" %}
+{% load reading_tags %}  <!-- BU SATIRIN EKLENMESİ GEREKİYOR -->
+
+{% block title %}Okuma Panelim{% endblock %}
+
+{% block content %}
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-slate-700">Okuma Panelim</h1>
+        <a href="{% url 'reading:logout' %}" class="text-sm text-slate-500 hover:text-red-600">Çıkış Yap</a>
+    </div>
+    
+    <!-- İSTATİSTİK BÖLÜMÜ -->
+    <!-- Dört kartın hepsinin bu "grid" div'inin içinde olduğundan emin olun -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    
+        <!-- Kart 1: Toplam Okunan Sayfa -->
+        <!-- text-center sınıfını geri ekledik -->
+        <div class="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+            <h3 class="text-slate-500 text-sm font-semibold">Toplam Okunan Sayfa</h3>
+            <p class="text-3xl font-bold text-blue-600">{{ total_pages_read }}</p>
+        </div>
+    
+        <!-- Kart 2: Tamamlanan Kitap -->
+        <div class="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+            <h3 class="text-slate-500 text-sm font-semibold">Tamamlanan Kitap</h3>
+            <p class="text-3xl font-bold text-green-600">{{ completed_books_count }}</p>
+        </div>
+    
+        <!-- Kart 3: Günlük Ortalama -->
+        <div class="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+            <h3 class="text-slate-500 text-sm font-semibold">Günlük Ortalama</h3>
+            <p class="text-3xl font-bold text-yellow-600">{{ avg_pages_per_day }}</p>
+        </div>
+    
+        <!-- Kart 4: Okuma Serisi -->
+        <div class="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+            <h3 class="text-slate-500 text-sm font-semibold">Okuma Serisi 🔥</h3>
+            <p class="text-3xl font-bold text-orange-600">{{ profile.current_streak }} <span class="text-lg">gün</span></p>
+        </div>
+    
+    </div>
+    <!-- İSTATİSTİK BÖLÜMÜ SONU -->
+
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-slate-700">Kitaplarım</h2>
+        <a href="{% url 'reading:add_book' %}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            + Yeni Kitap Ekle
+        </a>
+    </div>
+
+    <!-- YENİ SEKMELİ YAPI -->
+    <div x-data="{ activeTab: 'reading' }">
+        <!-- Sekme Başlıkları -->
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button @click="activeTab = 'reading'" 
+                        :class="{ 'border-blue-500 text-blue-600': activeTab === 'reading', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'reading' }"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Şu An Okuduklarım
+                </button>
+                <button @click="activeTab = 'finished'" 
+                        :class="{ 'border-blue-500 text-blue-600': activeTab === 'finished', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'finished' }"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Bitirdiklerim
+                </button>
+            </nav>
+        </div>
+
+        <!-- Sekme İçerikleri -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-4">
+            <!-- Şu An Okuduklarım Paneli -->
+            <div x-show="activeTab === 'reading'" class="space-y-4">
+                {% if reading_now_books %}
+                    {% for book in reading_now_books %}
+                        <!-- Kitap Kartı (Kod tekrarını önlemek için bunu bir include yapabiliriz, şimdilik böyle kalsın) -->
+                        <a href="{% url 'reading:book_detail' pk=book.pk %}" class="block border-b pb-4 last:border-b-0 hover:bg-slate-50 p-2 rounded-md">
+                            <h3 class="text-xl font-semibold">{{ book.title }}</h3>
+                            <p class="text-xs text-slate-400 mb-1">Yazar: {{ book.author|default:"Belirtilmemiş" }}</p>
+                            <p class="text-sm text-slate-500">
+                                Okunan: {{ book.current_page }} / Toplam: {{ book.total_pages }} sayfa.
+                            </p>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                {% with progress=book.current_page|mul:100|div:book.total_pages %}
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: {{ progress }}%"></div>
+                                {% endwith %}
+                            </div>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-slate-500">Şu an okuduğun bir kitap yok. Hadi yeni bir maceraya başla!</p>
+                {% endif %}
+            </div>
+
+            <!-- Bitirdiklerim Paneli -->
+            <div x-show="activeTab === 'finished'" class="space-y-4" style="display: none;">
+                {% if finished_books %}
+                    {% for book in finished_books %}
+                        <a href="{% url 'reading:book_detail' pk=book.pk %}" class="block border-b pb-4 last:border-b-0 hover:bg-slate-50 p-2 rounded-md">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-500 line-through">{{ book.title }}</h3>
+                                    <p class="text-xs text-slate-400">Yazar: {{ book.author|default:"Belirtilmemiş" }}</p>
+                                </div>
+                                <span class="text-green-500 font-bold">✓ Tamamlandı</span>
+                            </div>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-slate-500">Henüz hiç kitap bitirmedin. Azimle okumaya devam et!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
