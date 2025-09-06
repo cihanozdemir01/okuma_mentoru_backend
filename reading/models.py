@@ -45,3 +45,17 @@ class Not(models.Model):
     def __str__(self):
         # Admin panelinde notun ilk 50 karakteriyle görünmesini sağlar.
         return f"{self.kitap.title} - Not: {self.icerik[:50]}..."
+
+class Profile(models.Model):
+    # Her profil, Django'nun dahili User modeline birebir bağlı olacak.
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    
+    # Kullanıcının art arda okuma yaptığı gün sayısı.
+    streak = models.IntegerField(default=0)
+    
+    # Kullanıcının en son ne zaman bir kitabın sayfasını güncellediği.
+    # Bu alan, serinin devam edip etmediğini kontrol etmek için kullanılacak.
+    son_okuma_tarihi = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s Profile - Streak: {self.streak}"
