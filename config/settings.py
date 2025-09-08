@@ -16,7 +16,7 @@ SECRET_KEY = 'django-insecure-....senin-buradaki-değerin-farklı-olmalı....'
 DEBUG = True
 
 # Geliştirme aşamasında boş bir liste olabilir.
-ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1']
+ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1','okuma-mentoru-api.onrender.com']
 
 # --- PAYLAŞTIĞIN VE DOĞRU OLAN BÖLÜMLER ---
 
