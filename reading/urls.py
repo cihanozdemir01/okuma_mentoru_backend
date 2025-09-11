@@ -1,17 +1,27 @@
-# reading/urls.py
-
 from django.urls import path
-from .views import KitapListCreateAPIView, KitapDetailAPIView, NotListCreateAPIView
+from .views import (
+    KitapListCreateAPIView, 
+    KitapDetailAPIView, 
+    NotListCreateAPIView,
+    NoteListAPIView,
+    MonthlySummaryAPIView,
+    HeatmapAPIView
+)
 
 urlpatterns = [
-    # /api/kitaplar/ -> Tüm kitapları listeler (GET) veya yeni kitap ekler (POST)
-    path('', KitapListCreateAPIView.as_view(), name='api-kitap-list-create'),
+    # Sonuç URL: /api/kitaplar/
+    path('kitaplar/', KitapListCreateAPIView.as_view(), name='kitap-list-create'),
+    
+    # Sonuç URL: /api/kitaplar/<id>/
+    path('kitaplar/<int:pk>/', KitapDetailAPIView.as_view(), name='kitap-detail'),
+    
+    # Sonuç URL: /api/kitaplar/<id>/notlar/
+    path('kitaplar/<int:kitap_pk>/notlar/', NotListCreateAPIView.as_view(), name='not-list-create'),
+    
+    # Sonuç URL: /api/notes/
+    path('notes/', NoteListAPIView.as_view(), name='note-list-all'),
+    
+    path('stats/monthly-summary/', MonthlySummaryAPIView.as_view(), name='monthly-summary'),
 
-    # /api/kitaplar/<id>/ -> Tek bir kitabı getirir (GET), günceller (PATCH), siler (DELETE)
-    path('<int:pk>/', KitapDetailAPIView.as_view(), name='api-kitap-detail'),
-
-    # Bu yapı, belirli bir kitaba ait notları hedefler.
-    # <int:kitap_pk> -> Bu kısım, URL'deki sayıyı yakalar ve view'a 'kitap_pk'
-    #                  adında bir değişken olarak gönderir.
-    path('<int:kitap_pk>/notlar/', NotListCreateAPIView.as_view(), name='api-not-list-create'),
+    path('stats/heatmap/', HeatmapAPIView.as_view(), name='heatmap-data'),
 ]

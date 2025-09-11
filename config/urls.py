@@ -1,10 +1,11 @@
-# config/urls.py
 from django.contrib import admin
-from django.urls import path, include # include'u buraya ekle
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    #path('', include('reading.urls')), # Bu satırı ekle
-    path('api/kitaplar/', include('reading.urls')),
-
+    
+    # ESKİ SATIR (Bunu silin): path('api/kitaplar/', include('reading.urls')),
+    
+    # YENİ SATIR (Bunu ekleyin): Artık 'api/' ile başlayan her şey reading.urls'e gidecek.
+    path('api/', include('reading.urls')),
 ]
