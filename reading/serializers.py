@@ -14,7 +14,8 @@ class KitapSerializer(serializers.ModelSerializer):
             'current_page', 
             'status',
             'created_at',
-            'finished_at'  # YENİ ALAN EKLENDİ
+            'finished_at',
+            'cover_image_url'  # YENİ ALAN EKLENDİ
         ]
         read_only_fields = ['user']
 

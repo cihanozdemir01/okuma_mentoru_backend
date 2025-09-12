@@ -22,6 +22,13 @@ class Kitap(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.author}"
+    
+    # YENİ ALAN: Kitap kapağı görselinin URL'ini saklamak için.
+    # Bu alan boş olabilir, çünkü her kitap için kapak bulamayabiliriz.
+    cover_image_url = models.URLField(max_length=500, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.author}"
 
 class Not(models.Model):
     kitap = models.ForeignKey(Kitap, on_delete=models.CASCADE, related_name='notlar')

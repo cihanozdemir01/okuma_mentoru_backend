@@ -5,7 +5,8 @@ from .views import (
     NotListCreateAPIView,
     NoteListAPIView,
     MonthlySummaryAPIView,
-    HeatmapAPIView
+    HeatmapAPIView,
+    FindBookAPIView
 )
 
 urlpatterns = [
@@ -24,4 +25,6 @@ urlpatterns = [
     path('stats/monthly-summary/', MonthlySummaryAPIView.as_view(), name='monthly-summary'),
 
     path('stats/heatmap/', HeatmapAPIView.as_view(), name='heatmap-data'),
+
+    path('find-book/', FindBookAPIView.as_view(), name='find-book'),
 ]
