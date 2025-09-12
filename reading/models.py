@@ -1,8 +1,15 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+class Kategori(models.Model):
+    ad = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.ad
+
 class Kitap(models.Model):
     STATUS_CHOICES = [
+        ('beklemede', 'Okunacak'),
         ('okunuyor', 'Şu An Okunuyor'),
         ('bitti', 'Bitirildi'),
     ]
@@ -14,19 +21,14 @@ class Kitap(models.Model):
     status = models.CharField(
         max_length=10, 
         choices=STATUS_CHOICES, 
-        default='okunuyor'
+        default='beklemede'
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    # YENİ EKLENEN ALAN
     finished_at = models.DateTimeField(null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.title} - {self.author}"
-    
-    # YENİ ALAN: Kitap kapağı görselinin URL'ini saklamak için.
-    # Bu alan boş olabilir, çünkü her kitap için kapak bulamayabiliriz.
     cover_image_url = models.URLField(max_length=500, null=True, blank=True)
+    kategoriler = models.ManyToManyField(Kategori, blank=True, related_name='kitaplar')
 
+    is_featured = models.BooleanField(default=False)
     def __str__(self):
         return f"{self.title} - {self.author}"
 

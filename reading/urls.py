@@ -4,27 +4,24 @@ from .views import (
     KitapDetailAPIView, 
     NotListCreateAPIView,
     NoteListAPIView,
-    MonthlySummaryAPIView,
+    KategoriListAPIView,
+    AuthorListAPIView,
     HeatmapAPIView,
-    FindBookAPIView
+    SummaryAPIView # Yeni ve birleşik view'ımız
 )
 
 urlpatterns = [
-    # Sonuç URL: /api/kitaplar/
+    # Kitap & Not URL'leri
     path('kitaplar/', KitapListCreateAPIView.as_view(), name='kitap-list-create'),
-    
-    # Sonuç URL: /api/kitaplar/<id>/
     path('kitaplar/<int:pk>/', KitapDetailAPIView.as_view(), name='kitap-detail'),
-    
-    # Sonuç URL: /api/kitaplar/<id>/notlar/
     path('kitaplar/<int:kitap_pk>/notlar/', NotListCreateAPIView.as_view(), name='not-list-create'),
-    
-    # Sonuç URL: /api/notes/
     path('notes/', NoteListAPIView.as_view(), name='note-list-all'),
-    
-    path('stats/monthly-summary/', MonthlySummaryAPIView.as_view(), name='monthly-summary'),
 
+    # Filtreleme için yardımcı URL'ler
+    path('kategoriler/', KategoriListAPIView.as_view(), name='kategori-list'),
+    path('authors/', AuthorListAPIView.as_view(), name='author-list'),
+
+    # İstatistik URL'leri
     path('stats/heatmap/', HeatmapAPIView.as_view(), name='heatmap-data'),
-
-    path('find-book/', FindBookAPIView.as_view(), name='find-book'),
+    path('stats/summary/', SummaryAPIView.as_view(), name='summary-api'),
 ]

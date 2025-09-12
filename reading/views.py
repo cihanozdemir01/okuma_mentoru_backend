@@ -1,15 +1,23 @@
-from rest_framework import generics
-from .models import Kitap, Not, Profile, OkumaGunu
-from .serializers import KitapSerializer, NotSerializer
-from django.contrib.auth.models import User
+# Django ve Python kütüphaneleri
 from datetime import date, timedelta
-from rest_framework.response import Response
-from django.utils import timezone
-from rest_framework.views import APIView
-from django.db.models import Count
-from django.db.models.functions import TruncMonth
 import requests
-from django.conf import settings # API anahtarını güvenli bir şekilde almak için
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
+from django.utils import timezone
+
+# Django REST Framework kütüphaneleri
+from rest_framework import generics
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+# Kendi uygulama dosyalarımız
+from .models import Kitap, Not, Profile, OkumaGunu, Kategori
+from .serializers import KitapSerializer, NotSerializer, KategoriSerializer
+from .filters import KitapFilter
+
+
 
 def get_book_cover_url(title, author):
     """
@@ -42,32 +50,44 @@ def get_book_cover_url(title, author):
         return None
     return None
 
+class KategoriListAPIView(generics.ListAPIView):
+    queryset = Kategori.objects.all()
+    serializer_class = KategoriSerializer
+
 # --- EKSİK OLAN VE GERİ GETİRİLEN SINIF ---
 class KitapListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = KitapSerializer
+    # GÜNCELLEME: queryset'i doğrudan sınıf seviyesinde tanımlamak daha standarttır.
+    queryset = Kitap.objects.all().order_by('-created_at') # En yeni eklenenler üstte olsun
     
-    def get_queryset(self):
-        return Kitap.objects.all()
-
+    # YENİ: View'a, URL parametrelerini işlemek için bu filtre sınıfını kullanmasını söylüyoruz.
+    filterset_class = KitapFilter
+    
     def perform_create(self, serializer):
-        # Önce kitabı normal şekilde kaydet
         title = serializer.validated_data.get('title')
         author = serializer.validated_data.get('author')
-        
-        # Kapak görseli URL'ini al
         cover_url = get_book_cover_url(title, author)
-        
-        # Serializer'ı kapak URL'i ile birlikte kaydet
         serializer.save(cover_image_url=cover_url)
     
+    # GÜNCELLEME: 'list' metodunu, gelen istekleri filtreleyecek şekilde güncelliyoruz.
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        # 1. Önce, gelen isteğe göre filtrelenmiş queryset'i al.
+        #    `self.filter_queryset` metodu, `filterset_class`'ı kullanarak
+        #    ?status=bitti gibi parametreleri otomatik olarak uygular.
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # 2. Filtrelenmiş kitap listesi verisini serializer ile hazırla.
         serializer = self.get_serializer(queryset, many=True)
         kitaplar_data = serializer.data
         
-        bitirilen_kitap_sayisi = queryset.filter(status='bitti').count()
-        toplam_okunan_sayfa = sum(k.current_page for k in queryset if k.current_page is not None)
+        # 3. İstatistikleri HESAPLAMA (Filtrelenmemiş toplam istatistikler)
+        #    Kullanıcıya genel istatistikleri göstermeye devam etmek daha mantıklı olabilir.
+        #    Bu yüzden burada `self.get_queryset()`'in tamamını kullanıyoruz.
+        tum_kitaplar = Kitap.objects.all()
+        bitirilen_kitap_sayisi = tum_kitaplar.filter(status='bitti').count()
+        toplam_okunan_sayfa = sum(k.current_page for k in tum_kitaplar if k.current_page is not None)
         
+        # 4. Streak bilgisini al (bu da genel bir istatistiktir).
         user = User.objects.first()
         streak = 0
         if user:
@@ -78,6 +98,8 @@ class KitapListCreateAPIView(generics.ListCreateAPIView):
                 profile.save()
             streak = profile.streak
 
+        # 5. Tüm verileri tek bir JSON nesnesinde birleştir.
+        #    'kitaplar' listesi filtrelenmiş, 'istatistikler' ise genel olacak.
         data = {
             'kitaplar': kitaplar_data,
             'istatistikler': {
@@ -271,3 +293,64 @@ class FindBookAPIView(APIView):
                 {"error": f"API'ye erişirken hata: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class KategoriListAPIView(generics.ListAPIView):
+    queryset = Kategori.objects.all()
+    serializer_class = KategoriSerializer
+
+# YENİ VIEW: Tüm benzersiz yazarları listeler
+class AuthorListAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        # Veritabanındaki tüm kitaplardan, 'author' alanındaki
+        # benzersiz (distinct) değerleri al ve alfabetik sırala.
+        authors = Kitap.objects.values_list('author', flat=True).distinct().order_by('author')
+        return Response(authors)
+
+class SummaryAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        user = User.objects.first()
+        if not user: return Response([])
+
+        # URL'den parametreleri al
+        metric = request.query_params.get('metric', 'page_count')
+        group_by = request.query_params.get('group_by', 'month')
+
+        # Hangi modele ve alana bakacağımızı seç
+        if metric == 'book_count':
+            model = Kitap
+            date_field = 'finished_at'
+            aggregation_function = Count('id')
+        else: # Varsayılan 'page_count'
+            model = OkumaGunu
+            date_field = 'tarih'
+            aggregation_function = Sum('okunan_sayfa_sayisi')
+
+        # Gruplama periyodunu ve başlangıç tarihini seç
+        if group_by == 'week':
+            trunc_function = TruncWeek(date_field)
+            start_date = timezone.now().date() - timedelta(weeks=12)
+        elif group_by == 'day':
+            trunc_function = TruncDay(date_field)
+            start_date = timezone.now().date() - timedelta(days=12)
+        else: # Varsayılan 'month'
+            trunc_function = TruncMonth(date_field)
+            start_date = (timezone.now().date() - timedelta(days=365)).replace(day=1)
+
+        # Sorguyu bu dinamik parametrelerle oluştur
+        queryset = model.objects.filter(
+            # user=user, # Kullanıcı sistemi eklenince bu satır aktif edilecek
+            **{f'{date_field}__isnull': False}, # Tarih alanı boş olmayanları al
+            **{f'{date_field}__gte': start_date}
+        ).annotate(
+            period=trunc_function
+        ).values('period').annotate(
+            value=aggregation_function
+        ).order_by('period')
+
+        # Veriyi formatla
+        summary_data = [
+            {"period": result['period'].strftime('%Y-%m-%d'), "value": result['value']} 
+            for result in queryset
+        ]
+        
+        return Response(summary_data)
