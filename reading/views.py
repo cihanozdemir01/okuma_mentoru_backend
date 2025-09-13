@@ -252,18 +252,20 @@ class HeatmapAPIView(APIView):
 # YENİ VIEW: ISBN veya başlık/yazar ile kitap aramak için
 class FindBookAPIView(APIView):
     def get(self, request, *args, **kwargs):
-        # URL'den arama parametrelerini al
+        # Bu satırların hepsi en solda (sınıfın bir girinti içinde) olmalı
         isbn = request.query_params.get('isbn')
         title = request.query_params.get('title')
         author = request.query_params.get('author')
         
+        print(f"--- Kitap Arama İsteği Alındı ---")
+        print(f"ISBN: {isbn}")
+
         if not isbn and not (title and author):
             return Response(
                 {"error": "ISBN veya başlık/yazar parametreleri gereklidir."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Google Books API'sinde arama yap
         if isbn:
             query = f"isbn:{isbn}"
         else:
@@ -273,17 +275,18 @@ class FindBookAPIView(APIView):
         print(f"Google Books API'ye gidilecek URL: {url}")
         
         try:
-            response = requests.get(url, timeout=10) # 10 saniye zaman aşımı ekleyelim
+            # try bloğunun içindekiler bir girinti içeride olmalı
+            response = requests.get(url, timeout=10)
             print(f"Google Books API'den Gelen Durum Kodu: {response.status_code}")
             response.raise_for_status()
             data = response.json()
             
-             if data.get("totalItems", 0) > 0:
+            if data.get("totalItems", 0) > 0:
+                # if bloğunun içindekiler iki girinti içeride olmalı
                 print("Kitap bulundu, veriler işleniyor.")
                 item = data.get("items", [])[0]
                 volume_info = item.get("volumeInfo", {})
                 
-                # Flutter'a göndereceğimiz temiz veriyi oluştur
                 book_data = {
                     "title": volume_info.get("title", ""),
                     "author": ", ".join(volume_info.get("authors", [""])),
@@ -293,12 +296,14 @@ class FindBookAPIView(APIView):
                 }
                 return Response(book_data, status=status.HTTP_200_OK)
             else:
+                # else bloğu, if ile aynı hizada olmalı
                 print("Google Books API kitap bulamadı.")
                 return Response(
                     {"error": "Bu bilgilere sahip bir kitap bulunamadı."},
                     status=status.HTTP_404_NOT_FOUND
                 )
         except requests.exceptions.RequestException as e:
+            # except bloğu, try ile aynı hizada olmalı
             print(f"!!! Google Books API'ye erişirken KRİTİK HATA: {e} !!!")
             return Response(
                 {"error": f"API'ye erişirken hata: {e}"},
