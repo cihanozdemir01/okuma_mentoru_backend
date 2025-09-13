@@ -270,13 +270,16 @@ class FindBookAPIView(APIView):
             query = f"intitle:{title}+inauthor:{author}"
             
         url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=1"
+        print(f"Google Books API'ye gidilecek URL: {url}")
         
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=10) # 10 saniye zaman aşımı ekleyelim
+            print(f"Google Books API'den Gelen Durum Kodu: {response.status_code}")
             response.raise_for_status()
             data = response.json()
             
-            if data.get("totalItems", 0) > 0:
+             if data.get("totalItems", 0) > 0:
+                print("Kitap bulundu, veriler işleniyor.")
                 item = data.get("items", [])[0]
                 volume_info = item.get("volumeInfo", {})
                 
@@ -290,11 +293,13 @@ class FindBookAPIView(APIView):
                 }
                 return Response(book_data, status=status.HTTP_200_OK)
             else:
+                print("Google Books API kitap bulamadı.")
                 return Response(
                     {"error": "Bu bilgilere sahip bir kitap bulunamadı."},
                     status=status.HTTP_404_NOT_FOUND
                 )
         except requests.exceptions.RequestException as e:
+            print(f"!!! Google Books API'ye erişirken KRİTİK HATA: {e} !!!")
             return Response(
                 {"error": f"API'ye erişirken hata: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
