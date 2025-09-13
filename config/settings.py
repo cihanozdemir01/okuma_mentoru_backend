@@ -97,3 +97,5 @@ LOGIN_URL = 'reading:login'
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")

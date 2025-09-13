@@ -7,7 +7,8 @@ from .views import (
     KategoriListAPIView,
     AuthorListAPIView,
     HeatmapAPIView,
-    SummaryAPIView # Yeni ve birleşik view'ımız
+    SummaryAPIView,
+    CharacterChatAPIView
 )
 
 urlpatterns = [
@@ -24,4 +25,6 @@ urlpatterns = [
     # İstatistik URL'leri
     path('stats/heatmap/', HeatmapAPIView.as_view(), name='heatmap-data'),
     path('stats/summary/', SummaryAPIView.as_view(), name='summary-api'),
+
+    path('character-chat/', CharacterChatAPIView.as_view(), name='character-chat'),
 ]

@@ -1,3 +1,6 @@
+import google.generativeai as genai
+from django.conf import settings
+
 # Django ve Python kütüphaneleri
 from datetime import date, timedelta
 import requests
@@ -11,12 +14,15 @@ from django.utils import timezone
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import status
 
 # Kendi uygulama dosyalarımız
 from .models import Kitap, Not, Profile, OkumaGunu, Kategori
 from .serializers import KitapSerializer, NotSerializer, KategoriSerializer
 from .filters import KitapFilter
 
+if getattr(settings, 'GOOGLE_API_KEY', None):
+    genai.configure(api_key=settings.GOOGLE_API_KEY)
 
 
 def get_book_cover_url(title, author):
@@ -354,3 +360,43 @@ class SummaryAPIView(APIView):
         ]
         
         return Response(summary_data)
+
+class CharacterChatAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        # --- HATA AYIKLAMA: API Anahtarının yüklenip yüklenmediğini kontrol et ---
+        api_key = getattr(settings, 'GOOGLE_API_KEY', None)
+        if not api_key:
+            print("HATA: GOOGLE_API_KEY settings.py'de bulunamadı veya boş.")
+            return Response({"error": "Sunucu yapılandırma hatası: API anahtarı eksik."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # --- Mevcut kodun devamı ---
+        kitap_adi = request.data.get('kitap_adi')
+        karakter_adi = request.data.get('karakter_adi')
+        kullanici_sorusu = request.data.get('kullanici_sorusu')
+
+        if not all([kitap_adi, karakter_adi, kullanici_sorusu]):
+            return Response({"error": "Eksik parametreler."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            print("Gemini API'sine istek gönderiliyor...") # Log 1
+            genai.configure(api_key=api_key) # Anahtarı her seferinde yeniden configure etmek daha güvenli olabilir
+            
+            prompt = f"""
+            Sen, {kitap_adi} romanındaki {karakter_adi} karakterisin. 
+            Tüm cevaplarını, o karakterin kişiliğine, bilgi düzeyine ve konuşma tarzına tamamen bürünerek ver. 
+            Asla bir yapay zeka olduğunu veya bir metin modeli olduğunu söyleme. 
+            Sadece ve sadece {karakter_adi} olarak cevap ver. 
+            Modern dünyadan veya romanda geçmeyen olaylardan bahsetme.
+            Şimdi sana sorulan şu soruyu cevapla: "{kullanici_sorusu}"
+            """
+            
+            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            response = model.generate_content(prompt)
+            
+            print("Gemini API'sinden cevap başarıyla alındı.") # Log 2
+            return Response({"cevap": response.text}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            # GÜNCELLENMİŞ HATA MESAJI: Artık hatanın kendisini de yazdırıyoruz.
+            print(f"!!! Gemini API HATASI: {e} !!!") 
+            return Response({"error": "Yapay zeka ile iletişim kurulamadı."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
