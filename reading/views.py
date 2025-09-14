@@ -169,30 +169,30 @@ class KitapDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         
         # --- Güncelleme Sonrası İşlemler (Streak ve Heatmap) ---
         if response.status_code == 200:
-            print("[DEBUG] Kitap veritabanında başarıyla güncellendi.")
-            user = User.objects.first()
-            if not user: 
-                print("[DEBUG] Kullanıcı bulunamadı, işlem sonlandırılıyor.")
-                return response
-
+            # --- YENİ VE GÜNCELLENMİŞ KULLANICI MANTIĞI ---
+            # Veritabanında 'defaultuser' adında bir kullanıcı var mı diye bak.
+            # Yoksa, 'default@user.com' e-postası ile yeni bir tane oluştur.
+            user, created = User.objects.get_or_create(
+                username='defaultuser', 
+                defaults={'email': 'default@user.com'}
+            )
+            
+            if created:
+                # Eğer kullanıcı yeni oluşturulduysa, terminalde bir bilgilendirme mesajı göster.
+                print(f"[INFO] 'defaultuser' adında varsayılan kullanıcı oluşturuldu.")
+            
+            # Artık 'user' değişkeninin asla None olmayacağından eminiz.
+            
             if okunan_sayfa > 0:
-                print(f"[DEBUG] Okunan sayfa > 0. OkumaGunu kaydı oluşturulacak/güncellenecek.")
+                # OkumaGunu kaydı
                 today = timezone.now().date()
-                
                 okuma_gunu, created = OkumaGunu.objects.get_or_create(
                     user=user, 
                     tarih=today,
                     defaults={'okunan_sayfa_sayisi': 0}
                 )
-                
-                if created:
-                    print(f"[DEBUG] Yeni OkumaGunu kaydı oluşturuldu: {today}")
-                else:
-                    print(f"[DEBUG] Mevcut OkumaGunu kaydı bulundu: {today}")
-
                 okuma_gunu.okunan_sayfa_sayisi += okunan_sayfa
                 okuma_gunu.save()
-                print(f"[DEBUG] OkumaGunu kaydedildi. Yeni Toplam Sayfa: {okuma_gunu.okunan_sayfa_sayisi}")
 
                 # Streak (Profile) kaydı
                 profile, created = Profile.objects.get_or_create(user=user)
@@ -203,18 +203,11 @@ class KitapDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
                 elif (today_date - profile.son_okuma_tarihi == timedelta(days=1)):
                     profile.streak += 1
                 
-                # Bu iki satırın 'if okunan_sayfa > 0' bloğunun içinde olması gerekiyor.
                 profile.son_okuma_tarihi = today_date
                 profile.save()
-            else:
-                print("[DEBUG] Okunan sayfa 0 veya daha az olduğu için OkumaGunu kaydı yapılmadı.")
-
-        else:
-            print(f"[DEBUG] Kitap güncellenirken bir hata oluştu. Status Code: {response.status_code}")
-
-        print("--- [DEBUG] Kitap Güncelleme İsteği Bitti ---\n")
-        return response
         
+        return response
+
 class NotListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = NotSerializer
     def get_queryset(self):
