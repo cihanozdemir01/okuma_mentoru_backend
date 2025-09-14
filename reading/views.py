@@ -118,42 +118,46 @@ class KitapListCreateAPIView(generics.ListCreateAPIView):
         return Response(data)
 
 # --- MEVCUT DİĞER SINIFLAR ---
+# reading/views.py
+
+# ... (dosyanın en üstündeki tüm importlar aynı kalacak)
+
+# ... (KitapListCreateAPIView ve diğerleri aynı kalacak)
+
 class KitapDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = KitapSerializer
-    def get_queryset(self):
-        return Kitap.objects.all()
-    
+    queryset = Kitap.objects.all()
+
     def update(self, request, *args, **kwargs):
-        # --- Veri Hazırlama ve Hesaplama ---
+        print("\n--- [DEBUG] Kitap Güncelleme İsteği Başladı ---")
         
-        instance = self.get_object() # Kitabın mevcut halini al
+        instance = self.get_object()
+        print(f"[DEBUG] Mevcut Kitap: {instance.title}, Mevcut Sayfa: {instance.current_page}")
         
-        # Okunan sayfa sayısını hesapla
-        yeni_sayfa = request.data.get('current_page')
+        yeni_sayfa_str = request.data.get('current_page')
+        print(f"[DEBUG] Gelen Yeni Sayfa (string): {yeni_sayfa_str}")
+        
         okunan_sayfa = 0
-        if yeni_sayfa is not None:
+        if yeni_sayfa_str is not None:
             try:
-                okunan_sayfa = int(yeni_sayfa) - instance.current_page
+                yeni_sayfa_int = int(yeni_sayfa_str)
+                okunan_sayfa = yeni_sayfa_int - instance.current_page
+                print(f"[DEBUG] Hesaplanan Okunan Sayfa: {okunan_sayfa}")
             except (ValueError, TypeError):
                 okunan_sayfa = 0
+                print("[DEBUG] Gelen sayfa değeri geçersiz, okunan sayfa 0 olarak ayarlandı.")
 
-        # --- YENİ: Kapak Görseli Arama Mantığı ---
-        
-        # Gelen istekte 'title' veya 'author' güncelleniyor mu diye kontrol et
+        # --- Kapak Görseli Arama Mantığı ---
         new_title = request.data.get('title', instance.title)
         new_author = request.data.get('author', instance.author)
         
-        # Eğer başlık veya yazar değiştiyse (veya ilk defa ekleniyorsa)
-        # ve mevcut kapak URL'i boşsa, yeni bir kapak ara.
         if (new_title != instance.title or new_author != instance.author or not instance.cover_image_url):
-            print(f"Yeni kapak aranıyor: {new_title} - {new_author}") # Hata ayıklama
+            print(f"Yeni kapak aranıyor: {new_title} - {new_author}")
             cover_url = get_book_cover_url(new_title, new_author)
             if cover_url:
-                # Gelen isteğin verisine yeni URL'i ekle, böylece serializer bunu kaydeder.
                 request.data['cover_image_url'] = cover_url
 
         # --- finished_at Mantığı ---
-        
         new_status = request.data.get('status')
         if new_status == 'bitti' and instance.status != 'bitti':
             request.data['finished_at'] = timezone.now()
@@ -161,28 +165,34 @@ class KitapDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             request.data['finished_at'] = None
 
         # --- Ana Güncelleme İşlemi ---
-        
-        # Gelen isteği (üzerinde yaptığımız potansiyel değişikliklerle birlikte)
-        # normal güncelleme sürecine sok.
         response = super().update(request, *args, **kwargs)
         
         # --- Güncelleme Sonrası İşlemler (Streak ve Heatmap) ---
-        
         if response.status_code == 200:
+            print("[DEBUG] Kitap veritabanında başarıyla güncellendi.")
             user = User.objects.first()
-            if not user: return response
+            if not user: 
+                print("[DEBUG] Kullanıcı bulunamadı, işlem sonlandırılıyor.")
+                return response
 
-            # Sadece sayfa okunduysa aktiviteyi ve seriyi kaydet
             if okunan_sayfa > 0:
-                # Heatmap (OkumaGunu) kaydı
+                print(f"[DEBUG] Okunan sayfa > 0. OkumaGunu kaydı oluşturulacak/güncellenecek.")
                 today = timezone.now().date()
+                
                 okuma_gunu, created = OkumaGunu.objects.get_or_create(
                     user=user, 
                     tarih=today,
                     defaults={'okunan_sayfa_sayisi': 0}
                 )
+                
+                if created:
+                    print(f"[DEBUG] Yeni OkumaGunu kaydı oluşturuldu: {today}")
+                else:
+                    print(f"[DEBUG] Mevcut OkumaGunu kaydı bulundu: {today}")
+
                 okuma_gunu.okunan_sayfa_sayisi += okunan_sayfa
                 okuma_gunu.save()
+                print(f"[DEBUG] OkumaGunu kaydedildi. Yeni Toplam Sayfa: {okuma_gunu.okunan_sayfa_sayisi}")
 
                 # Streak (Profile) kaydı
                 profile, created = Profile.objects.get_or_create(user=user)
@@ -193,10 +203,18 @@ class KitapDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
                 elif (today_date - profile.son_okuma_tarihi == timedelta(days=1)):
                     profile.streak += 1
                 
+                # Bu iki satırın 'if okunan_sayfa > 0' bloğunun içinde olması gerekiyor.
                 profile.son_okuma_tarihi = today_date
                 profile.save()
-                
+            else:
+                print("[DEBUG] Okunan sayfa 0 veya daha az olduğu için OkumaGunu kaydı yapılmadı.")
+
+        else:
+            print(f"[DEBUG] Kitap güncellenirken bir hata oluştu. Status Code: {response.status_code}")
+
+        print("--- [DEBUG] Kitap Güncelleme İsteği Bitti ---\n")
         return response
+        
 class NotListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = NotSerializer
     def get_queryset(self):
